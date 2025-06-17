@@ -1,0 +1,9 @@
+replicaCount: 1
+image:
+  repository: mberthos/python-1234
+  pullPolicy: IfNotPresent
+  tag: python-1234-dev-latest
+resources:
+  requests:
+    cpu: 40m
+    memory: 40M

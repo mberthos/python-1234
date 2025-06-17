@@ -1,0 +1,80 @@
+name: python-1234-cicd
+
+on:
+  push:
+    #paths:
+    #  - src/**
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Shorten commit id
+        shell: bash
+        run: |
+          echo "COMMIT_ID=${GITHUB_SHA::6}" >> "$GITHUB_ENV"
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: mberthos/python-1234:${{ env.COMMIT_ID }}
+        outputs:
+          commit_id: ${{ env.COMMIT_ID }}
+
+      - name: Show initial directories
+        shell: bash
+        run: |
+            echo "Home directory: $HOME"
+            echo "Working directory before checkout: $(pwd)"
+            echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+            echo "RUNNER_TEMP: $RUNNER_TEMP"
+            ls -alR "$GITHUB_WORKSPACE" || echo "GITHUB_WORKSPACE is empty or does not exist before checkout."
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Adicione estas linhas para depurar o checkout
+          path: '.' # Clona para a raiz do GITHUB_WORKSPACE
+          fetch-depth: 0 # Garante que todo o histórico seja puxado, útil para verificar tags/branches
+
+      - name: List files in GITHUB_WORKSPACE after checkout
+        shell: bash
+        run: |
+           echo "Working directory after checkout step: $(pwd)"
+           echo "GITHUB_WORKSPACE after checkout: $GITHUB_WORKSPACE"
+           echo "Contents of GITHUB_WORKSPACE:"
+           ls -alR "$GITHUB_WORKSPACE" # Liste tudo recursivamente na pasta do workspace
+           echo "Contents of current directory:"
+           ls -alR . # Liste tudo recursivamente no diretório atual (que deve ser GITHUB_WORKSPACE)
+
+      - name: Modify values file
+        shell: bash
+        run: |
+          echo "Current working directory: $(pwd)"
+          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+          ls -ltr "$GITHUB_WORKSPACE" # Liste o conteúdo do workspace
+          pwd
+          ls -ltr          
+          # Agora, o caminho para o arquivo deve ser relativo a GITHUB_WORKSPACE
+          pip install yq
+          yq -Yi '.image.tag = ""' "$GITHUB_WORKSPACE/charts/python-app/values.yaml"
+
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          message: 'Update values.yaml with commit '
+    outputs:
+      commit_id: 
